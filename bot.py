@@ -14,6 +14,7 @@ class Popflash(commands.Cog):
         self.team1 = []
         self.team2 = []
         self.maps = ["vertigo",  "dust2", "inferno", "nuke", "overpass", "cache", "cobblestone", "train"]
+        self.stop = False
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -21,6 +22,7 @@ class Popflash(commands.Cog):
 
     @commands.command(name="10man", help="/10man [cpt1] [cpt2] to start a team pick")
     async def start(self, ctx, cpt1: discord.User, cpt2: discord.User):
+        self.stop = False
         self.team1.append(cpt1)
         self.team2.append(cpt2)
         await ctx.send(f"Popflash started, captain 1: {cpt1.mention}, captain 2: {cpt2.mention}")
@@ -34,13 +36,22 @@ class Popflash(commands.Cog):
         async def pick(cpt, check, team):
             await ctx.send(f"{cpt.mention}'s pick")
             player = await bot.wait_for("message", check=check)
-            team.append(player.mentions[0])
+            if player.mentions[0] in self.team1 or player.mentions[0] in self.team2:
+                await ctx.send(f"{player.mentions[0].mention} is already in a team")
+                await pick(cpt, check, team)
+            else:
+                team.append(player.mentions[0])
 
-        for i in range(1):
+        for i in range(4):
+            if self.stop:
+                break
             await pick(cpt1, check1, self.team1)
+            if self.stop:
+                break
             await pick(cpt2, check2, self.team2)
         nl = '\n - '
-        await ctx.send(f"Team picks complete. /veto to start map veto \n Team 1: \n - {nl.join([player.name for player in self.team1]) } \n \n Team 2: \n - {nl.join([player.name for player in self.team2])}")
+        if not self.stop:
+            await ctx.send(f"Team picks complete. /veto to start map veto \n Team 1: \n - {nl.join([player.name for player in self.team1]) } \n \n Team 2: \n - {nl.join([player.name for player in self.team2])}")
 
     @commands.command(name="veto", help="Start a veto, if no teams have been chosen use '/popflash veto' for user who called command to control veto or '/popflash veto [cpt2]' to have two players control veto")
     async def veto(self, ctx, *args: discord.User):
@@ -71,6 +82,13 @@ class Popflash(commands.Cog):
                 break
             self.maps = await veto_map(self.maps, check2, self.team2)
         await ctx.send(f"Chosen map: **{self.maps[0]}** \nhttps://popflash.site/scrim/connor")
+        self.maps = ["vertigo",  "dust2", "inferno", "nuke", "overpass", "cache", "cobblestone", "train"]
+        self.team1 = []
+        self.team2 = []
+
+    @commands.command(name="clear", help="Clear teams to start fresh")
+    async def clear(self, ctx):
+        self.stop = True
         self.maps = ["vertigo",  "dust2", "inferno", "nuke", "overpass", "cache", "cobblestone", "train"]
         self.team1 = []
         self.team2 = []
