@@ -4,11 +4,11 @@ Bot made to handle team picking and map vetoing for CS:GO 10 mans. Uses https://
 
 ## Commands
 
-> /10man [captain 1] [captain 2]
+'/10man [captain 1] [captain 2]'
 Starts team picking with two captains
 
-> /veto
+'/veto'
 Start a veto, if no teams have been chosen use '/popflash veto' for user who called command to control veto or '/popflash veto [cpt2]' to have two players control veto
 
-> /clear
+'/clear'
 Clear teams to start fresh
