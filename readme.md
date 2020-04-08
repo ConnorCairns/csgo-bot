@@ -23,11 +23,13 @@ The token can be found on https://discordapp.com/developers/applications by crea
 Running in a virtual environment is recommended, to do so navigate to repo home directory then:
 
 `python3 -m venv bot-env`
+
 `source bot-env/bin/activate`
 
 After the virtual environment is running:
 
 `pip install -r requirements.txt`
+
 `python bot.py`
 
 ## Commands
