@@ -15,7 +15,7 @@ class Popflash(commands.Cog):
         self.team1_channel = self.bot.get_channel(self.team1_id)
         self.team2_channel = self.bot.get_channel(self.team2_id)
 
-    @tasks.loop(count=1)
+    @tasks.loop(count=4)
     async def pick_helper(self, ctx, cpt1, cpt2):
         if self.stop:
             try:
@@ -93,7 +93,7 @@ class Popflash(commands.Cog):
         self.team1 = []
         self.team2 = []
 
-    @commands.command(name="cancel", help"Cancel 10man match and start again fresh")
+    @commands.command(name="cancel", help="Cancel 10man match and start again fresh")
     async def cancel(self, ctx):
         self.stop = True
         self.team1 = []
