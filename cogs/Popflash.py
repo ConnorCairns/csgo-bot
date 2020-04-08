@@ -1,5 +1,6 @@
 import discord
 import os
+import random
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
 
@@ -16,14 +17,53 @@ class Popflash(commands.Cog):
         self.lobby_channel = self.bot.get_channel(self.lobby_id)
         self.team1_channel = self.bot.get_channel(self.team1_id)
         self.team2_channel = self.bot.get_channel(self.team2_id)
+        self.complete = False
 
-    @tasks.loop(count=4)
-    async def pick_helper(self, ctx, cpt1, cpt2):
-        if self.stop:
-            try:
-                self.pick_helper_task.cancel()
-            except:
-                self.stop = False
+    # @tasks.loop(count=1)
+    # async def pick_helper(self, ctx, cpt1, cpt2):
+    #     if self.stop:
+    #         try:
+    #             self.pick_helper_task.cancel()
+    #             print("HELLEOADSALDA")
+    #         except:
+    #             self.stop = False
+    #     def wrapper(cpt):
+    #         def check(msg):
+    #             return msg.author == cpt and len(msg.mentions) == 1 and msg.mentions[0] != self.bot.user
+    #         return check
+
+    #     async def pick(cpt, team, team_channel, num):
+    #         await ctx.send(f"{cpt.mention}'s pick ({4 - num} picks left)")
+    #         player = await self.bot.wait_for("message", check=wrapper(cpt))
+    #         if player.mentions[0] in self.team1 or player.mentions[0] in self.team2:
+    #             await ctx.send(f"{player.mentions[0].mention} is already in a team")
+    #             await pick(cpt, team, team_channel, num)
+    #         else:
+    #             team.append(player.mentions[0])
+    #             await player.mentions[0].move_to(team_channel)
+
+    #     for i in range(1):
+    #         if self.stop:
+    #             break
+    #         real_members = list(filter(lambda x: x.bot == False, self.lobby_channel.members))
+    #         await ctx.send(f"Players not picked: {', '.join([member.mention for member in real_members])}")
+    #         await pick(cpt1, self.team1, self.team1_channel, i)
+    #         if self.stop:
+    #             break
+    #         await ctx.send(f"Players not picked: {', '.join([member.mention for member in real_members])}")
+    #         await pick(cpt2, self.team2, self.team2_channel, i)
+
+    @commands.command(name="10man", help="/10man [cpt1] [cpt2] to start a team pick")
+    async def start(self, ctx):
+        real_members = list(filter(lambda x: x.bot == False, self.lobby_channel.members))
+        captains = random.sample(range(0,9),2)
+        cpt1 = real_members[captains[0]]
+        cpt2 = real_members[captains[1]]
+        self.team1.append(cpt1)
+        self.team2.append(cpt2)
+        await ctx.send(f"Popflash started, captain 1: {cpt1.mention}, captain 2: {cpt2.mention}")
+
+        # self.pick_helper_task = await self.pick_helper.start(ctx, cpt1, cpt2)
         def wrapper(cpt):
             def check(msg):
                 return msg.author == cpt and len(msg.mentions) == 1 and msg.mentions[0] != self.bot.user
@@ -37,9 +77,12 @@ class Popflash(commands.Cog):
                 await pick(cpt, team, team_channel, num)
             else:
                 team.append(player.mentions[0])
-                await player.mentions[0].move_to(team_channel)
+                try:
+                    await player.mentions[0].move_to(team_channel)
+                except:
+                    await ctx.send("Player not connected to voice, could not move them")
 
-        for i in range(1):
+        for i in range(4):
             if self.stop:
                 break
             real_members = list(filter(lambda x: x.bot == False, self.lobby_channel.members))
@@ -49,14 +92,6 @@ class Popflash(commands.Cog):
                 break
             await ctx.send(f"Players not picked: {', '.join([member.mention for member in real_members])}")
             await pick(cpt2, self.team2, self.team2_channel, i)
-
-    @commands.command(name="10man", help="/10man [cpt1] [cpt2] to start a team pick")
-    async def start(self, ctx, cpt1: discord.User, cpt2: discord.User):
-        self.team1.append(cpt1)
-        self.team2.append(cpt2)
-        await ctx.send(f"Popflash started, captain 1: {cpt1.mention}, captain 2: {cpt2.mention}")
-
-        self.pick_helper_task = await self.pick_helper.start(ctx, cpt1, cpt2)
 
         nl = '\n - '
         if not self.stop:
