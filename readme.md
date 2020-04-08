@@ -12,7 +12,13 @@ Starts team picking with two captains
 
 `/veto`
 
-Start a veto, if no teams have been chosen use '/popflash veto' for user who called command to control veto or '/popflash veto [cpt2]' to have two players control veto
+If teams have been chosen, start a veto with captains controlling. If no teams have been chosen, starts a veto with author controlling
+
+---
+
+`/veto [captain 2]`
+
+Starts a veto with author and captain specified in argument controlling
 
 ---
 
