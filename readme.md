@@ -22,6 +22,12 @@ Starts a veto with author and captain specified in argument controlling
 
 ---
 
-`/clear`
+`/cancel`
 
-Clear teams to start fresh
+Cancel 10man match and start again fresh
+
+---
+
+`/reload`
+
+Reload all cogs

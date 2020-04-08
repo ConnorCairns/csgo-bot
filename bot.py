@@ -19,7 +19,6 @@ async def on_ready():
 @bot.command(name="reload", help="Reload all cogs to start fresh")
 async def reload(ctx):
     for cog in cogs:
-        print(bot.cogs["Popflash"].get_listeners())
         bot.reload_extension(cog)
         await ctx.send(f"Reloaded {cog}")
 

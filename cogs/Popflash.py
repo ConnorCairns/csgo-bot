@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 class Popflash(commands.Cog):
     def __init__(self, bot, lobby_id: int, team1_id: int, team2_id: int):
@@ -15,25 +15,24 @@ class Popflash(commands.Cog):
         self.team1_channel = self.bot.get_channel(self.team1_id)
         self.team2_channel = self.bot.get_channel(self.team2_id)
 
-    @commands.command(name="10man", help="/10man [cpt1] [cpt2] to start a team pick")
-    async def start(self, ctx, cpt1: discord.User, cpt2: discord.User):
-        self.stop = False
-        self.team1.append(cpt1)
-        self.team2.append(cpt2)
-        await ctx.send(f"Popflash started, captain 1: {cpt1.mention}, captain 2: {cpt2.mention}")
+    @tasks.loop(count=1)
+    async def pick_helper(self, ctx, cpt1, cpt2):
+        if self.stop:
+            try:
+                self.pick_helper_task.cancel()
+            except:
+                self.stop = False
+        def wrapper(cpt):
+            def check(msg):
+                return msg.author == cpt and len(msg.mentions) == 1 and msg.mentions[0] != self.bot.user
+            return check
 
-        def check1(msg):
-            return msg.author == cpt1 and len(msg.mentions) == 1 and msg.mentions[0] != self.bot.user
-
-        def check2(msg):
-            return msg.author == cpt2 and len(msg.mentions) == 1
-
-        async def pick(cpt, check, team, team_channel, num):
+        async def pick(cpt, team, team_channel, num):
             await ctx.send(f"{cpt.mention}'s pick ({4 - num} picks left)")
-            player = await self.bot.wait_for("message", check=check)
+            player = await self.bot.wait_for("message", check=wrapper(cpt))
             if player.mentions[0] in self.team1 or player.mentions[0] in self.team2:
                 await ctx.send(f"{player.mentions[0].mention} is already in a team")
-                await pick(cpt, check, team, num)
+                await pick(cpt, team, team_channel, num)
             else:
                 team.append(player.mentions[0])
                 #await player.mentions[0].move_to(team_channel)
@@ -43,11 +42,20 @@ class Popflash(commands.Cog):
                 break
             real_members = list(filter(lambda x: x.bot == False, self.lobby_channel.members))
             await ctx.send(f"Players not picked: {', '.join([member.mention for member in real_members])}")
-            await pick(cpt1, check1, self.team1, self.team1_channel, i)
+            await pick(cpt1, self.team1, self.team1_channel, i)
             if self.stop:
                 break
             await ctx.send(f"Players not picked: {', '.join([member.mention for member in real_members])}")
-            await pick(cpt2, check2, self.team2, self.team2_channel, i)
+            await pick(cpt2, self.team2, self.team2_channel, i)
+
+    @commands.command(name="10man", help="/10man [cpt1] [cpt2] to start a team pick")
+    async def start(self, ctx, cpt1: discord.User, cpt2: discord.User):
+        self.team1.append(cpt1)
+        self.team2.append(cpt2)
+        await ctx.send(f"Popflash started, captain 1: {cpt1.mention}, captain 2: {cpt2.mention}")
+
+        self.pick_helper_task = await self.pick_helper.start(ctx, cpt1, cpt2)
+
         nl = '\n - '
         if not self.stop:
             await ctx.send(f"Team picks complete. /veto to start map veto \n Team 1: \n - {nl.join([player.name for player in self.team1]) } \n \n Team 2: \n - {nl.join([player.name for player in self.team2])}")
@@ -85,12 +93,13 @@ class Popflash(commands.Cog):
         self.team1 = []
         self.team2 = []
 
-    # @commands.command(name="clear", help="Clear teams to start fresh")
-    # async def clear(self, ctx):
-    #     self.stop = True
-    #     self.maps = ["vertigo",  "dust2", "inferno", "nuke", "overpass", "cache", "cobblestone", "train"]
-    #     self.team1 = []
-    #     self.team2 = []
+    @commands.command(name="cancel", help"Cancel 10man match and start again fresh")
+    async def cancel(self, ctx):
+        self.stop = True
+        self.team1 = []
+        self.team2 = []
+        self.maps = ["vertigo",  "dust2", "inferno", "nuke", "overpass", "cache", "cobblestone", "train", "mirage","anubis","chlorine"]
+        await ctx.send("Cancelled")
 
 def setup(bot):
     bot.add_cog(Popflash(bot, 158162147715710976, 695366273361510511, 695366328953077801))
