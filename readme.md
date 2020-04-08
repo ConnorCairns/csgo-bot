@@ -7,15 +7,20 @@ Bot made to handle team picking and map vetoing for CS:GO 10 mans. Uses https://
 #### Prerequisites
 
 Python 3.6 or higher required.
-In the bot home directory you will need to create a file called .env and on the first line put:
+In the bot home directory you will need to create a file called .env and put:
 
-`DISCORD_TOKEN="[Your discord bot's token]"`
+```
+DISCORD_TOKEN="[Your discord bot's token]"
+LOBBY_ID="[Discord lobby channel ID]"
+TEAM1_ID="[Discord team 1 channel ID]"
+TEAM2_ID="[Discord team 2 channel ID]"
+```
 
-The token can be found on https://discordapp.com/developers/applications by creating a new application and adding a bot.
+The token can be found on https://discordapp.com/developers/applications by creating a new application and adding a bot. Channel ID can be found by enabling developer mode on discord (Settings -> Appearance -> Advanced) then right clicking on a channel and selecting `Copy ID`
 
 ---
 
-Running in a virtual environment is recommended, to do so navigate to bots home directory then:
+Running in a virtual environment is recommended, to do so navigate to repo home directory then:
 
 `python3 -m venv bot-env`
 `source bot-env/bin/activate`

@@ -1,5 +1,7 @@
 import discord
+import os
 from discord.ext import commands, tasks
+from dotenv import load_dotenv
 
 class Popflash(commands.Cog):
     def __init__(self, bot, lobby_id: int, team1_id: int, team2_id: int):
@@ -35,7 +37,7 @@ class Popflash(commands.Cog):
                 await pick(cpt, team, team_channel, num)
             else:
                 team.append(player.mentions[0])
-                #await player.mentions[0].move_to(team_channel)
+                await player.mentions[0].move_to(team_channel)
 
         for i in range(1):
             if self.stop:
@@ -102,4 +104,8 @@ class Popflash(commands.Cog):
         await ctx.send("Cancelled")
 
 def setup(bot):
-    bot.add_cog(Popflash(bot, 158162147715710976, 695366273361510511, 695366328953077801))
+    load_dotenv()
+    LOBBY_ID = int(os.getenv('LOBBY_ID'))
+    TEAM1_ID = int(os.getenv('TEAM1_ID'))
+    TEAM2_ID = int(os.getenv('TEAM2_ID'))
+    bot.add_cog(Popflash(bot, LOBBY_ID, TEAM1_ID, TEAM2_ID))
