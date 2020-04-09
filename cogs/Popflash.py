@@ -19,95 +19,81 @@ class Popflash(commands.Cog):
         self.team2_channel = self.bot.get_channel(self.team2_id)
         self.complete = False
 
-    # @tasks.loop(count=1)
-    # async def pick_helper(self, ctx, cpt1, cpt2):
-    #     if self.stop:
-    #         try:
-    #             self.pick_helper_task.cancel()
-    #             print("HELLEOADSALDA")
-    #         except:
-    #             self.stop = False
-    #     def wrapper(cpt):
-    #         def check(msg):
-    #             return msg.author == cpt and len(msg.mentions) == 1 and msg.mentions[0] != self.bot.user
-    #         return check
+    def wrapper(self, cpt):
+        def check(msg):
+            return msg.author == cpt and len(msg.mentions) == 1 and msg.mentions[0] != self.bot.user
+        return check
 
-    #     async def pick(cpt, team, team_channel, num):
-    #         await ctx.send(f"{cpt.mention}'s pick ({4 - num} picks left)")
-    #         player = await self.bot.wait_for("message", check=wrapper(cpt))
-    #         if player.mentions[0] in self.team1 or player.mentions[0] in self.team2:
-    #             await ctx.send(f"{player.mentions[0].mention} is already in a team")
-    #             await pick(cpt, team, team_channel, num)
-    #         else:
-    #             team.append(player.mentions[0])
-    #             await player.mentions[0].move_to(team_channel)
 
-    #     for i in range(1):
-    #         if self.stop:
-    #             break
-    #         real_members = list(filter(lambda x: x.bot == False, self.lobby_channel.members))
-    #         await ctx.send(f"Players not picked: {', '.join([member.mention for member in real_members])}")
-    #         await pick(cpt1, self.team1, self.team1_channel, i)
-    #         if self.stop:
-    #             break
-    #         await ctx.send(f"Players not picked: {', '.join([member.mention for member in real_members])}")
-    #         await pick(cpt2, self.team2, self.team2_channel, i)
+    async def pick(self, ctx, cpt, team, team_channel, num):
+        await ctx.send(f"{cpt.mention}'s pick ({4 - num} picks left)")
+        player = await self.bot.wait_for("message", check=self.wrapper(cpt))
+        if player.mentions[0] in self.team1 or player.mentions[0] in self.team2:
+            await ctx.send(f"{player.mentions[0].mention} is already in a team")
+            await self.pick(ctx, cpt, team, team_channel, num)
+        else:
+            team.append(player.mentions[0])
+            try:
+                pass
+                await player.mentions[0].move_to(team_channel)
+            except:
+                await ctx.send("Player not connected to voice, could not move them")
+
+    def get_remaining_players(self, cpt1, cpt2):
+        remaining_players = list(filter(lambda x: x.bot == False, self.lobby_channel.members))
+        try:
+            remaining_players.remove(cpt1)
+            remaining_players.remove(cpt2)
+        except:
+            pass #Only reason for failure is if captain has left lobby which is fine so no error handling needed
+        return remaining_players
+
+    @tasks.loop(count=4)
+    async def pick_loop(self, ctx, cpt1, cpt2):
+        if self.stop:
+            self.pick_loop.cancel()
+        else:
+            real_members = self.get_remaining_players(cpt1, cpt2)
+            await ctx.send(f"Players not picked: {', '.join([member.mention for member in real_members])}")
+            await self.pick(ctx, cpt1, self.team1, self.team1_channel, self.pick_loop.current_loop)
+        if self.stop:
+            self.pick_loop.cancel()
+        else:
+            real_members = self.get_remaining_players(cpt1, cpt2)
+            await ctx.send(f"Players not picked: {', '.join([member.mention for member in real_members])}")
+            await self.pick(ctx, cpt2, self.team2, self.team2_channel, self.pick_loop.current_loop)
 
     @commands.command(name="10man", help="/10man [cpt1] [cpt2] to start a team pick")
     async def start(self, ctx):
+        if self.stop:
+            self.pick_loop.cancel()
+            self.stop = False
         real_members = list(filter(lambda x: x.bot == False, self.lobby_channel.members))
         captains = random.sample(range(0,9),2)
-        cpt1 = real_members[captains[0]]
-        cpt2 = real_members[captains[1]]
+        try:
+            cpt1 = real_members[captains[0]]
+            cpt2 = real_members[captains[1]]
+        except:
+            await ctx.send("Not enough people in lobby")
+            return
         self.team1.append(cpt1)
         self.team2.append(cpt2)
         await ctx.send(f"Popflash started, captain 1: {cpt1.mention}, captain 2: {cpt2.mention}")
-
-        # self.pick_helper_task = await self.pick_helper.start(ctx, cpt1, cpt2)
-        def wrapper(cpt):
-            def check(msg):
-                return msg.author == cpt and len(msg.mentions) == 1 and msg.mentions[0] != self.bot.user
-            return check
-
-        async def pick(cpt, team, team_channel, num):
-            await ctx.send(f"{cpt.mention}'s pick ({4 - num} picks left)")
-            player = await self.bot.wait_for("message", check=wrapper(cpt))
-            if player.mentions[0] in self.team1 or player.mentions[0] in self.team2:
-                await ctx.send(f"{player.mentions[0].mention} is already in a team")
-                await pick(cpt, team, team_channel, num)
-            else:
-                team.append(player.mentions[0])
-                try:
-                    await player.mentions[0].move_to(team_channel)
-                except:
-                    await ctx.send("Player not connected to voice, could not move them")
-
-        for i in range(4):
-            if self.stop:
-                break
-            real_members = list(filter(lambda x: x.bot == False, self.lobby_channel.members))
-            await ctx.send(f"Players not picked: {', '.join([member.mention for member in real_members])}")
-            await pick(cpt1, self.team1, self.team1_channel, i)
-            if self.stop:
-                break
-            await ctx.send(f"Players not picked: {', '.join([member.mention for member in real_members])}")
-            await pick(cpt2, self.team2, self.team2_channel, i)
+        await self.pick_loop.start(ctx, cpt1, cpt2)
 
         nl = '\n - '
-        if not self.stop:
-            await ctx.send(f"Team picks complete. /veto to start map veto \n Team 1: \n - {nl.join([player.name for player in self.team1]) } \n \n Team 2: \n - {nl.join([player.name for player in self.team2])}")
+        await ctx.send(f"Team picks complete. /veto to start map veto \n Team 1: \n - {nl.join([player.name for player in self.team1]) } \n \n Team 2: \n - {nl.join([player.name for player in self.team2])}")
 
     @commands.command(name="veto", help="Start a veto, if no teams have been chosen use '/popflash veto' for user who called command to control veto or '/popflash veto [cpt2]' to have two players control veto")
     async def veto(self, ctx, *args: discord.User):
-        def check1(msg):
-            return msg.author == self.team1[0] and msg.content in self.maps
+        def wrapper(team):
+            def check(msg):
+                return msg.author == team[0] and msg.content in self.maps
+            return check
 
-        def check2(msg):
-            return msg.author == self.team2[0] and msg.content in self.maps
-
-        async def veto_map(maps, check, team):
+        async def veto_map(maps, team):
             await ctx.send(f"Remaining maps: {', '.join(self.maps)} \n{team[0].mention}'s veto" )
-            vetoed_map = await self.bot.wait_for("message", check=check)
+            vetoed_map = await self.bot.wait_for("message", check=wrapper(team))
             return list(filter(lambda x: x != vetoed_map.content.lower(), self.maps))
 
         if not self.team1 or not self.team2:
@@ -121,10 +107,10 @@ class Popflash(commands.Cog):
             await ctx.send(message)
 
         while len(self.maps) > 1:
-            self.maps = await veto_map(self.maps, check1, self.team1)
+            self.maps = await veto_map(self.maps, self.team1)
             if len(self.maps) == 1:
                 break
-            self.maps = await veto_map(self.maps, check2, self.team2)
+            self.maps = await veto_map(self.maps, self.team2)
         await ctx.send(f"Chosen map: **{self.maps[0]}** \nhttps://popflash.site/scrim/connor")
         self.maps = ["vertigo",  "dust2", "inferno", "nuke", "overpass", "cache", "cobblestone", "train"]
         self.team1 = []
