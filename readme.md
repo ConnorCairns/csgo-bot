@@ -34,9 +34,9 @@ After the virtual environment is running:
 
 ## Commands
 
-`/10man [captain 1] [captain 2]`
+`/10man`
 
-Starts team picking with two captains
+Starts team picking with two randomly selected captains
 
 ---
 
