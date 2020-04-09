@@ -84,7 +84,7 @@ class Popflash(commands.Cog):
         nl = '\n - '
         await ctx.send(f"Team picks complete. /veto to start map veto \n Team 1: \n - {nl.join([player.name for player in self.team1]) } \n \n Team 2: \n - {nl.join([player.name for player in self.team2])}")
 
-    @commands.command(name="veto", help="Start a veto, if no teams have been chosen use '/popflash veto' for user who called command to control veto or '/popflash veto [cpt2]' to have two players control veto")
+    @commands.command(name="veto", help="Start a veto, if no teams have been chosen use '/veto' for user who called command to control veto or '/veto [cpt2]' to have two players control veto")
     async def veto(self, ctx, *args: discord.User):
         def wrapper(team):
             def check(msg):
