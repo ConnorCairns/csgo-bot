@@ -21,7 +21,6 @@ class Popflash(commands.Cog):
             return msg.author == cpt and len(msg.mentions) == 1 and msg.mentions[0] != self.bot.user
         return check
 
-
     async def pick(self, ctx, cpt, team, team_channel, num):
         await ctx.send(f"{cpt.mention}'s pick ({4 - num} picks left)")
         player = await self.bot.wait_for("message", check=self.wrapper(cpt))
@@ -61,9 +60,7 @@ class Popflash(commands.Cog):
 
     @commands.command(name="10man", help="/10man to start a team pick")
     async def start(self, ctx):
-        if self.stop:
-            self.pick_loop.cancel()
-            self.stop = False
+        self.stop = False
         real_members = list(filter(lambda x: x.bot == False, self.lobby_channel.members))
         captains = random.sample(range(0,9),2)
         try:
@@ -98,9 +95,7 @@ class Popflash(commands.Cog):
 
     @commands.command(name="veto", help="Start a veto, if no teams have been chosen use '/veto' for user who called command to control veto or '/veto [cpt2]' to have two players control veto")
     async def veto(self, ctx, *args: discord.User):
-        if self.stop:
-            self.veto_map.cancel()
-            self.stop=False
+        self.stop=False
 
         if not self.team1 or not self.team2:
             self.team1 = [ctx.message.author]
@@ -119,8 +114,14 @@ class Popflash(commands.Cog):
             await self.veto_map.start(ctx, self.maps, self.team2)
         await ctx.send(f"Chosen map: **{self.maps[0]}** \nhttps://popflash.site/scrim/connor")
         self.reset()
+        
     @commands.command(name="cancel", help="Cancel match")
     async def cancel(self, ctx):
+        try:
+            self.veto_map.cancel()
+            self.pick_loop.cancel()
+        except:
+            print("Failed to cancel a task")
         self.stop = True
         self.reset()
         await ctx.send("Cancelled")
