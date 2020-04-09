@@ -11,12 +11,9 @@ class Popflash(commands.Cog):
         self.team2 = []
         self.maps = ["vertigo",  "dust2", "inferno", "nuke", "overpass", "cache", "cobblestone", "train", "mirage","anubis","chlorine"]
         self.stop = False
-        self.lobby_id = lobby_id
-        self.team1_id = team1_id
-        self.team2_id = team2_id
-        self.lobby_channel = self.bot.get_channel(self.lobby_id)
-        self.team1_channel = self.bot.get_channel(self.team1_id)
-        self.team2_channel = self.bot.get_channel(self.team2_id)
+        self.lobby_channel = self.bot.get_channel(lobby_id)
+        self.team1_channel = self.bot.get_channel(team1_id)
+        self.team2_channel = self.bot.get_channel(team2_id)
         self.complete = False
 
     def wrapper(self, cpt):
@@ -34,7 +31,6 @@ class Popflash(commands.Cog):
         else:
             team.append(player.mentions[0])
             try:
-                pass
                 await player.mentions[0].move_to(team_channel)
             except:
                 await ctx.send("Player not connected to voice, could not move them")
@@ -84,17 +80,27 @@ class Popflash(commands.Cog):
         nl = '\n - '
         await ctx.send(f"Team picks complete. /veto to start map veto \n Team 1: \n - {nl.join([player.name for player in self.team1]) } \n \n Team 2: \n - {nl.join([player.name for player in self.team2])}")
 
+    def veto_wrapper(self, team):
+        def check(msg):
+            return msg.author == team[0] and msg.content in self.maps
+        return check
+
+    @tasks.loop(count=1)
+    async def veto_map(self, ctx, maps, team):
+        await ctx.send(f"Remaining maps: {', '.join(self.maps)} \n{team[0].mention}'s veto" )
+        vetoed_map = await self.bot.wait_for("message", check=self.veto_wrapper(team))
+        self.maps = list(filter(lambda x: x != vetoed_map.content.lower(), self.maps))
+
+    def reset(self):
+        self.team1 = []
+        self.team2 = []
+        self.maps = ["vertigo",  "dust2", "inferno", "nuke", "overpass", "cache", "cobblestone", "train", "mirage","anubis","chlorine"]
+
     @commands.command(name="veto", help="Start a veto, if no teams have been chosen use '/veto' for user who called command to control veto or '/veto [cpt2]' to have two players control veto")
     async def veto(self, ctx, *args: discord.User):
-        def wrapper(team):
-            def check(msg):
-                return msg.author == team[0] and msg.content in self.maps
-            return check
-
-        async def veto_map(maps, team):
-            await ctx.send(f"Remaining maps: {', '.join(self.maps)} \n{team[0].mention}'s veto" )
-            vetoed_map = await self.bot.wait_for("message", check=wrapper(team))
-            return list(filter(lambda x: x != vetoed_map.content.lower(), self.maps))
+        if self.stop:
+            self.veto_map.cancel()
+            self.stop=False
 
         if not self.team1 or not self.team2:
             self.team1 = [ctx.message.author]
@@ -106,22 +112,17 @@ class Popflash(commands.Cog):
                 message = f"Veto started without teams, **{ctx.message.author.name}** will control veto"
             await ctx.send(message)
 
-        while len(self.maps) > 1:
-            self.maps = await veto_map(self.maps, self.team1)
+        while (len(self.maps) > 1) and not self.stop:
+            await self.veto_map.start(ctx, self.maps, self.team1)
             if len(self.maps) == 1:
                 break
-            self.maps = await veto_map(self.maps, self.team2)
+            await self.veto_map.start(ctx, self.maps, self.team2)
         await ctx.send(f"Chosen map: **{self.maps[0]}** \nhttps://popflash.site/scrim/connor")
-        self.maps = ["vertigo",  "dust2", "inferno", "nuke", "overpass", "cache", "cobblestone", "train"]
-        self.team1 = []
-        self.team2 = []
-
+        self.reset()
     @commands.command(name="cancel", help="Cancel match")
     async def cancel(self, ctx):
         self.stop = True
-        self.team1 = []
-        self.team2 = []
-        self.maps = ["vertigo",  "dust2", "inferno", "nuke", "overpass", "cache", "cobblestone", "train", "mirage","anubis","chlorine"]
+        self.reset()
         await ctx.send("Cancelled")
 
 def setup(bot):
