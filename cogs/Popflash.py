@@ -63,7 +63,7 @@ class Popflash(commands.Cog):
             await ctx.send(f"Players not picked: {', '.join([member.mention for member in real_members])}")
             await self.pick(ctx, cpt2, self.team2, self.team2_channel, self.pick_loop.current_loop)
 
-    @commands.command(name="10man", help="/10man [cpt1] [cpt2] to start a team pick")
+    @commands.command(name="10man", help="/10man to start a team pick")
     async def start(self, ctx):
         if self.stop:
             self.pick_loop.cancel()
@@ -116,7 +116,7 @@ class Popflash(commands.Cog):
         self.team1 = []
         self.team2 = []
 
-    @commands.command(name="cancel", help="Cancel 10man match and start again fresh")
+    @commands.command(name="cancel", help="Cancel match")
     async def cancel(self, ctx):
         self.stop = True
         self.team1 = []
