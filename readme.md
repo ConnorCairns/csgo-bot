@@ -38,11 +38,15 @@ After the virtual environment is running:
 
 Starts team picking with two randomly selected captains
 
+To pick a player @ them in chat, no prefix required (e.g `@Connor`)
+
 ---
 
 `/veto`
 
 If teams have been chosen, start a veto with captains controlling. If no teams have been chosen, starts a veto with author controlling
+
+To veto a map type the map in chat, no prefix required (e.g `mirage`)
 
 ---
 

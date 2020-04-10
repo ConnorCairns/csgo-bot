@@ -1,6 +1,7 @@
 import discord
 import os
 import random
+import math
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
 
@@ -10,11 +11,9 @@ class Popflash(commands.Cog):
         self.team1 = []
         self.team2 = []
         self.maps = ["vertigo",  "dust2", "inferno", "nuke", "overpass", "cache", "cobblestone", "train", "mirage","anubis","chlorine"]
-        self.stop = False
         self.lobby_channel = self.bot.get_channel(lobby_id)
         self.team1_channel = self.bot.get_channel(team1_id)
         self.team2_channel = self.bot.get_channel(team2_id)
-        self.complete = False
 
     def wrapper(self, cpt):
         def check(msg):
@@ -22,7 +21,7 @@ class Popflash(commands.Cog):
         return check
 
     async def pick(self, ctx, cpt, team, team_channel, num):
-        await ctx.send(f"{cpt.mention}'s pick ({4 - num} picks left)")
+        await ctx.send(f"{cpt.mention}'s pick ({math.ceil(4 - (num / 2))} picks left)")
         player = await self.bot.wait_for("message", check=self.wrapper(cpt))
         if player.mentions[0] in self.team1 or player.mentions[0] in self.team2:
             await ctx.send(f"{player.mentions[0].mention} is already in a team")
@@ -43,24 +42,20 @@ class Popflash(commands.Cog):
             pass #Only reason for failure is if captain has left lobby which is fine so no error handling needed
         return remaining_players
 
-    @tasks.loop(count=4)
+    @tasks.loop(count=8)
     async def pick_loop(self, ctx, cpt1, cpt2):
-        if self.stop:
-            self.pick_loop.cancel()
-        else:
-            real_members = self.get_remaining_players(cpt1, cpt2)
-            await ctx.send(f"Players not picked: {', '.join([member.mention for member in real_members])}")
+        real_members = self.get_remaining_players(cpt1, cpt2)
+        await ctx.send(f"Players not picked: {', '.join([member.mention for member in real_members])}")
+        if self.pick_loop.current_loop % 2 == 0:
             await self.pick(ctx, cpt1, self.team1, self.team1_channel, self.pick_loop.current_loop)
-        if self.stop:
-            self.pick_loop.cancel()
         else:
-            real_members = self.get_remaining_players(cpt1, cpt2)
-            await ctx.send(f"Players not picked: {', '.join([member.mention for member in real_members])}")
             await self.pick(ctx, cpt2, self.team2, self.team2_channel, self.pick_loop.current_loop)
 
     @commands.command(name="10man", help="/10man to start a team pick")
     async def start(self, ctx):
-        self.stop = False
+        if self.team1 or self.team2:
+            self.reset()
+            await ctx.send("Clearing previous teams")
         real_members = list(filter(lambda x: x.bot == False, self.lobby_channel.members))
         captains = random.sample(range(0,9),2)
         try:
@@ -95,8 +90,6 @@ class Popflash(commands.Cog):
 
     @commands.command(name="veto", help="Start a veto, if no teams have been chosen use '/veto' for user who called command to control veto or '/veto [cpt2]' to have two players control veto")
     async def veto(self, ctx, *args: discord.User):
-        self.stop=False
-
         if not self.team1 or not self.team2:
             self.team1 = [ctx.message.author]
             if args:
@@ -107,7 +100,7 @@ class Popflash(commands.Cog):
                 message = f"Veto started without teams, **{ctx.message.author.name}** will control veto"
             await ctx.send(message)
 
-        while (len(self.maps) > 1) and not self.stop:
+        while len(self.maps) > 1:
             await self.veto_map.start(ctx, self.maps, self.team1)
             if len(self.maps) == 1:
                 break
@@ -117,12 +110,8 @@ class Popflash(commands.Cog):
         
     @commands.command(name="cancel", help="Cancel match")
     async def cancel(self, ctx):
-        try:
-            self.veto_map.cancel()
-            self.pick_loop.cancel()
-        except:
-            print("Failed to cancel a task")
-        self.stop = True
+        self.veto_map.cancel()
+        self.pick_loop.cancel()
         self.reset()
         await ctx.send("Cancelled")
 
